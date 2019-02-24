@@ -7,7 +7,9 @@ const pug = require("pug");
 const passport = require("passport");
 const session = require("express-session");
 const cors = require('cors');
+const mongo = require("mongodb").MongoClient;
 const ObjectID = require("mongodb").ObjectID;
+const database = "mongodb://localhost:27017/advancedNode"
 
 const app = express();
 app.use(cors());
@@ -28,18 +30,31 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser((user, done) => {
-   done(null, user._id);
- });
- 
-// passport.deserializeUser((id, done) => {
-//         db.collection('users').findOne(
-//             {_id: new ObjectID(id)},
-//             (err, doc) => {
-//                 done(null, null);
-//             }
-//         );
-//     });
+mongo.connect(database, (err, db) => {
+    if(err) {
+        console.log('Database error: ' + err);
+    } else {
+        console.log('Successful database connection');
+
+        //serialization and app.listen
+        passport.serializeUser((user, done) => {
+          done(null, user._id);
+        });
+        
+        passport.deserializeUser((id, done) => {
+            db.collection('users').findOne(
+                {_id: new ObjectID(id)},
+                (err, doc) => {
+                    done(null, doc);
+                }
+            );
+        });
+        
+        app.listen(process.env.PORT || 3000, () => {
+          console.log("Listening on port " + process.env.PORT);
+        });
+
+}});
 
 app.route('/')
   .get((req, res) => {
@@ -48,6 +63,4 @@ app.route('/')
     });
   });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Listening on port " + process.env.PORT);
-});
+
